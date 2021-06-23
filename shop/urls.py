@@ -16,13 +16,26 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import SimpleRouter
 
-from main.views import ProductsListView, ProductDetailsView, CreateReview
+from main.views import ProductViewSet, ReviewViewSet, OrderViewSet
+
+router = SimpleRouter()
+router.register('products', ProductViewSet)
+router.register('reviews', ReviewViewSet)
+router.register('order', OrderViewSet)# path('api/v1/reviews/', ReviewViewSet.as_view()),
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('products/', ProductsListView.as_view()),
-    path('products/<int:pk>/', ProductDetailsView.as_view()),
-    path('reviews/', CreateReview.as_view()),
+    path('api/v1/', include(router.urls)),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# path('api/v1/products/', ProductViewSet.as_view({'post': 'create', 'get': 'list'})),
+# path('api/v1/products/<int:pk>/', ProductViewSet.as_view({'get': 'retrieve',
+#                                                           'put': 'update',
+#                                                           'patch': 'partial_update',
+#                                                           'delete': 'destroy'})),
+# path('products/', ProductsListView.as_view()),
+# path('products/<int:pk>/', ProductDetailsView.as_view()),

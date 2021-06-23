@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from main.models import Product, Review
+from main.models import Product, Review, OrderItems, Order
 
 
 class ProductListSerializer(serializers.ModelSerializer):
@@ -39,10 +39,32 @@ class ReviewSerializer(serializers.ModelSerializer):
         attrs['author'] = request.user
         return attrs
 
-
-
 class OrderItemsSerializer(serializers.ModelSerializer):
-    pass
+    class Mets:
+        model = OrderItems
+        fields = ('product', 'quantity')
+
 
 class OrderSerializer(serializers.ModelSerializer):
-    pass
+    products = OrderItemsSerializer(many=True)
+
+    class Meta:
+        model = Order
+        fields = ('products', 'notes')
+
+    def create(self, validated_data):
+        total_sum = 0
+        request = self.context.get('request')
+        validated_data['user'] = request.user
+        validated_data['status'] = 'new'
+        validated_data['total_sum'] = 0
+        products = validated_data.pop('products')
+        order = Order.objects.create(**validated_data)
+        for prod in products:
+            total_sum += prod['product'].price * prod['quantity']
+            OrderItems.objects.create(order=order, **prod)
+        order.total_sum = total_sum
+        order.save()
+        return order
+
+
