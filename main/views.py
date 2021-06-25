@@ -77,7 +77,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAdminUser()]
-        elif self.action == 'create_review':
+        elif self.action in ['create_review', 'like']
             return [IsAuthenticated()]
         return []
 
