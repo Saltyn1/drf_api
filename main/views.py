@@ -1,6 +1,7 @@
 import django_filters.rest_framework.backends
+from django.db.models import Avg
 from rest_framework import status, viewsets, mixins
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
 from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, BasePermission
 from rest_framework.response import Response
@@ -9,7 +10,7 @@ from django_filters import rest_framework as filters
 from rest_framework.filters import OrderingFilter
 
 from .filters import ProductFilter
-from .models import Product, Review, Order
+from .models import Product, Review, Order, WhishList
 
 # 1. Список товаров, доступен всем пользователям
 from .permissions import IsAuthorOrAdminPermission, DenyAll
@@ -76,7 +77,39 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAdminUser()]
+        elif self.action == 'create_review':
+            return [IsAuthenticated()]
         return []
+
+
+    # api/v1/products/id/create_review
+    @action(detail=True, methods=['POST'])
+    def create_review(self, request, pk):
+        data = request.data.copy()
+        data['product'] = pk
+        serializer = ReviewSerializer(data=request.data,
+                                      context={'request': request})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data, status=201)
+        else:
+            return Response(serializer.errors, status=400)
+
+    # /api/v1/products/id/like
+    @action(detail=True, methods=['POST'])
+    def like(self, request, pk):
+        product = self.get_object()
+        user = request.user
+        like_obj, created = WhishList.objects.get_or_create(product=product, user=user)
+        if like_obj.is_liked:
+            like_obj.is_liked = False
+            like_obj.save()
+            return Response('disliked')
+        else:
+            like_obj.is_liked = True
+            like_obj.save()
+            return Response('liked')
+
 
 # 4. Создание отзывов, доступно только залогиненным пользователям
 # class CreateReview(CreateAPIView):
@@ -86,6 +119,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 #
 #     def get_serializer_context(self):
 #         return {'request': self.request}
+
 
 class ReviewViewSet(mixins.CreateModelMixin,
                     mixins.UpdateModelMixin,
@@ -98,6 +132,7 @@ class ReviewViewSet(mixins.CreateModelMixin,
         if self.action == 'create':
             return [IsAuthenticated()]
         return [IsAuthorOrAdminPermission()]
+
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()

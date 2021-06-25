@@ -22,6 +22,8 @@ class RegistrationView(APIView):
             serializer.save()
             return Response('Ваш аккаунт успешно зарегистрирован', status=status.HTTP_201_CREATED)
 
+
+
 class ActivationView(APIView):
     def post(self, request):
         serializer = ActivationSerializer(data=request.data)
@@ -34,14 +36,18 @@ class ActivationView(APIView):
 class LoginView(ObtainAuthToken):
     serializer_class = LoginSerializer
 
+
 class LogoutView(APIView):
     pass
+
 
 class ResetPasswordView(APIView):
     pass
 
+
 class ChangePasswordView(APIView):
     pass
+
 
 class UserProfileView(APIView):
     pass

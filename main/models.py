@@ -71,6 +71,16 @@ class OrderItems(models.Model):
 
 
 
+class WhishList(models.Model):
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             related_name='likes')
+    product = models.ForeignKey(Product,
+                                on_delete=models.CASCADE)
+    is_liked = models.BooleanField(default=False)
+
+
+
 
 
 
