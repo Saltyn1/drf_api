@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, BasePermiss
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters import rest_framework as filters
+from rest_framework.filters import OrderingFilter
 
 from .filters import ProductFilter
 from .models import Product, Review, Order
@@ -63,8 +64,9 @@ from .serializers import ProductListSerializer, ProductDetailsSerializer, Review
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductDetailsSerializer
-    filter_backends = (filters.DjangoFilterBackend, )
+    filter_backends = (filters.DjangoFilterBackend, OrderingFilter)
     filterset_class = ProductFilter
+    ordering_fields = ['title', 'price']
 
     def get_serializer_class(self):
         if self.action == 'list':
