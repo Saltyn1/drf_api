@@ -5,6 +5,7 @@ from rest_framework import serializers
 User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
+
     password = serializers.CharField(min_length=6, required=True)
     password_confirm = serializers.CharField(min_length=6, required=True)
 
@@ -32,6 +33,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 class ActivationSerializer(serializers.Serializer):
+
     email = serializers.EmailField(required=True)
     activation_code = serializers.CharField(required=True)
 
@@ -75,7 +77,75 @@ class LoginSerializer(serializers.Serializer):
 
 
 class ForgotPasswordSerializer(serializers.Serializer):
-    pass
+    email = serializers.EmailField(required=True)
+
+    def validate_email(self, email):
+        if not User.objects.filter(email=email).exists():
+            raise serializers.ValidationError('Такого пользователя нет!')
+        return email
+
+    def send_reset_email(self):
+        email = self.validated_data.get('email')
+        user = User.objects.get(email=email)
+        user.create_activation_code()
+        message = f"Код для смены пароля {user.activation_code}"
+        send_mail(
+            'Смена пароля',
+            message,
+            'boss@gmail.com',
+            [email]
+        )
+
+
+class CreateNewPasswordSerializer(serializers.Serializer):
+
+    activation_code = serializers.CharField(required=True)
+    password = serializers.CharField(min_length=6, required=True)
+    password_confirm = serializers.CharField(min_length=6, required=True)
+
+    def validate_activation_code(self, code):
+        if not User.objects.filter(activation_code=code).exists():
+            raise serializers.ValidationError('Неверный код активации')
+        return code
+
+    def validate(self, attrs):
+        password = attrs.get('password')
+        password_confirm = attrs.get('password_confirm')
+        if password != password_confirm:
+            raise serializers.ValidationError('Пароли не совпадают')
+        return attrs
+
+    def create_pass(self):
+        code = self.validated_data.get('activation_code')
+        password = self.validated_data.get('password')
+        user = User.objects.get(activation_code=code)
+        user.set_password(password)
+        user.save()
+
 
 class ChangePasswordSerializer(serializers.Serializer):
-    pass
+
+    old_pass = serializers.CharField(required=True)
+    new_pass = serializers.CharField(min_length=6, required=True)
+    new_pass_confirm = serializers.CharField(min_length=6, required=True)
+
+    def validate_old_password(self, password):
+        request = self.context.get('request')
+        if not request.user.check_password(password):
+            raise serializers.ValidationError('Введён неверный парол')
+        return password
+
+    def validate(self, attrs):
+        pass_ = self.validated_data.get('new_pass')
+        pass_confirm = self.validated_data.get('new_pass_confirm')
+        if pass_ != pass_confirm:
+            raise serializers.ValidationError('Неверное подверждение')
+        return attrs
+
+    def set_new_password(self):
+        request = self.context.get('request')
+        new_pass = self.validated_data.get('new_pass')
+        user = request.user
+        user.set_password(new_pass)
+        user.save()
+

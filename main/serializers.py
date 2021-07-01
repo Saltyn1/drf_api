@@ -10,6 +10,12 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = ('id', 'title', 'price', 'image')
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if not instance.first_name and instance.last_name:
+            representation['full_name'] = 'Анонимный пользователь'
+        return representation
+
 class ProductDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
@@ -33,13 +39,6 @@ class ReviewAuthorSerializer(serializers.ModelSerializer):
         model = User
         fields = ('first_name', 'last_name')
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        if not instance.first_name and not instance.last_name:
-            representation['full_name'] = 'Анонимный пользователь'
-        return representation
-
-
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -59,7 +58,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         return rating
 
     def validate(self, attrs):
-        print(attrs)
         request = self.context.get('request')
         attrs['author'] = request.user
         return attrs

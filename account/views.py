@@ -1,10 +1,13 @@
 from django.shortcuts import render
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from account.serializers import RegisterSerializer, ActivationSerializer, LoginSerializer
+from account.serializers import RegisterSerializer, ActivationSerializer, LoginSerializer, ChangePasswordSerializer, \
+    ForgotPasswordSerializer, CreateNewPasswordSerializer
 
 '''
 1. Регистрация
@@ -25,6 +28,7 @@ class RegistrationView(APIView):
 
 
 class ActivationView(APIView):
+
     def post(self, request):
         serializer = ActivationSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
@@ -33,20 +37,44 @@ class ActivationView(APIView):
                             status=status.HTTP_200_OK)
 
 
-class LoginView(ObtainAuthToken):
+class LoginView(ObtainAuthToken):  # вход
     serializer_class = LoginSerializer
 
 
-class LogoutView(APIView):
-    pass
+class LogoutView(APIView):  # выход
+    permission_classes = [IsAuthenticated()]
+
+    def post(self, request):
+        Token.objects.filter(user=request.user).delete()
+        return Response('Вы успешно вышли!')
 
 
-class ResetPasswordView(APIView):
-    pass
+class ResetPasswordView(APIView):  # запрос пароля
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.send_reset_email()
+            return Response('Вам отправлен код для смены пароля', status=status.HTTP_200_OK)
 
 
-class ChangePasswordView(APIView):
-    pass
+class ResetPasswordCompleteView(APIView):
+
+    def get(self, request):
+        serializer = CreateNewPasswordSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.create_pass()
+            return Response('Пароль успешно обновлён', status=status.HTTP_200_OK)
+
+
+class ChangePasswordView(APIView):  # смена пароля
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.set_new_password()
+            return Response('Вы успешно поменяли пароль', status=status.HTTP_200_OK)
 
 
 class UserProfileView(APIView):
